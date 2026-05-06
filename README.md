@@ -2,6 +2,9 @@
 
 **Sales Forecast Pro** is a production-grade forecasting pipeline that transforms irregular retail data into high-precision, 8-week per-state sales predictions. Designed for the beverage industry, the system benchmarks 5 model families, monitors drift, and serves insights via an interactive dashboard.
 
+![Dashboard Overview](screenshots/overview.png)
+![Live Forecast](screenshots/forecast.png)
+
 ---
 
 ## 🚀 Key Features
@@ -20,6 +23,9 @@
 - **Midnight Blue Dashboard**: A high-contrast Streamlit UI designed for enterprise reporting.
 - **Drift Badges**: Real-time visibility into model stability and data distribution shifts.
 - **PDF Reporting**: Generate automated multi-page executive summaries for any state.
+
+![Model Performance](screenshots/models.png)
+![National Performance](screenshots/national.png)
 
 ---
 
