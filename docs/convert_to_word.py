@@ -32,8 +32,13 @@ def parse_markdown_content(md_text):
     while i < len(lines):
         line = lines[i]
         
+        # Image
+        img_match = re.search(r'!\[.*?\]\((.*?)\)', line)
+        if img_match:
+            img_path = img_match.group(1)
+            sections.append(('image', img_path))
         # Heading
-        if line.startswith('#'):
+        elif line.startswith('#'):
             level = len(line) - len(line.lstrip('#'))
             text = line.lstrip('#').strip()
             sections.append(('heading', level, text))
@@ -68,6 +73,7 @@ def add_markdown_to_docx(doc, md_file_path):
         content = f.read()
     
     sections = parse_markdown_content(content)
+    base_dir = Path(md_file_path).parent.parent
     
     for section in sections:
         if section[0] == 'heading':
@@ -75,6 +81,23 @@ def add_markdown_to_docx(doc, md_file_path):
             style = f'Heading {min(level, 9)}'
             doc.add_paragraph(text, style=style)
         
+        elif section[0] == 'image':
+            _, img_rel_path = section
+            # Resolve image path relative to project root or doc folder
+            img_path = Path(md_file_path).parent / img_rel_path
+            if not img_path.exists():
+                img_path = base_dir / img_rel_path
+            
+            if img_path.exists():
+                try:
+                    doc.add_picture(str(img_path), width=Inches(6))
+                    p = doc.add_paragraph(f"Figure: {img_path.name}")
+                    p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                except Exception as e:
+                    doc.add_paragraph(f"[Error adding image {img_path.name}: {e}]")
+            else:
+                doc.add_paragraph(f"[Image not found: {img_rel_path}]")
+
         elif section[0] == 'code':
             _, code_text, lang = section
             p = doc.add_paragraph()
@@ -90,11 +113,11 @@ def add_markdown_to_docx(doc, md_file_path):
         
         elif section[0] == 'paragraph':
             _, text = section
-            # Simple markdown formatting
-            text = text.replace('**', '')
-            text = text.replace('`', '')
-            text = text.replace('_', '')
-            doc.add_paragraph(text)
+            if not re.search(r'!\[.*?\]\((.*?)\)', text): # Skip if it was already handled as image
+                text = text.replace('**', '')
+                text = text.replace('`', '')
+                text = text.replace('_', '')
+                doc.add_paragraph(text)
 
 def main():
     """Main conversion function."""
@@ -108,16 +131,24 @@ def main():
     title = doc.add_heading('Sales Forecast Pro — Complete Documentation', 0)
     title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     
-    # Add table of contents placeholder
-    doc.add_heading('Table of Contents', 1)
-    for i, fname in enumerate(DOC_FILES, 1):
-        title = fname.replace('_', ' ').replace('.md', '')
-        doc.add_paragraph(title, style='List Bullet')
+    # Add summary page with images from README/PROJECT_DOC
+    doc.add_heading('Executive Dashboard Summary', 1)
+    
+    # Manually add the 4 key screenshots at the beginning
+    screenshots_dir = docs_dir.parent / "screenshots"
+    for img_name in ["overview.png", "forecast.png", "models.png", "national.png"]:
+        img_path = screenshots_dir / img_name
+        if img_path.exists():
+            doc.add_picture(str(img_path), width=Inches(6))
+            p = doc.add_paragraph(f"Dashboard View: {img_name.replace('.png', '').capitalize()}")
+            p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            doc.add_paragraph("") # Spacer
     
     doc.add_page_break()
-    
+
     # Add each markdown file
-    for md_file in DOC_FILES:
+    all_files = ["PROJECT_DOCUMENTATION.md"] + DOC_FILES
+    for md_file in all_files:
         md_path = docs_dir / md_file
         
         if md_path.exists():
@@ -129,7 +160,7 @@ def main():
     
     # Save the document
     doc.save(output_file)
-    print(f"\n✓ Word document created: {output_file}")
+    print(f"\n[DONE] Word document created: {output_file}")
     print(f"  Size: {output_file.stat().st_size / 1024:.1f} KB")
 
 if __name__ == "__main__":
